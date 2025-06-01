@@ -3,6 +3,19 @@ using UnityEngine.Rendering;
 
 public class PlayerMovement : MonoBehaviour
 {
+
+    [Header("Reference")]
+    [SerializeField] private Transform avatar;
+    [SerializeField] private Transform aim;
+
+    [Header("Mouse Config")]
+    [SerializeReference][Range(-90, 0)] private float minPitch;
+    [SerializeField][Range(0, 90)] private float maxPitch;
+    [SerializeField][Range(0, 5)] private float mouseSensitivity;
+
+
+
+
     private Rigidbody rigid;
     public float speed { get; private set; } = 10f;
     public float moveAccel { get; private set; } = 30f;
@@ -10,8 +23,12 @@ public class PlayerMovement : MonoBehaviour
     private float jumpPower = 5;
     private float curAccel;
     private bool isJumped = false;
-    private bool isGround = false;
-    public void Move()
+    private bool isAiming = false;
+
+    
+   
+
+    public void SetMove()
     {
         // 입력 설정
         float xInput = Input.GetAxisRaw("Horizontal");
@@ -41,7 +58,6 @@ public class PlayerMovement : MonoBehaviour
         // 점프 시와 이동 시의 이동속도를 다르게하여 점프 할때 이동속도가 빨라지는 것을 방지
         // curAccel은 점프가 활성화 되면 점프 가속도로, 점프가 비활성화 되면 이동 가속도로 이동하도록 삼항연산자 이용
         curAccel = isJumped ? jumpAccel : moveAccel;
-
         move.x = Mathf.MoveTowards(move.x, vec.x, curAccel * Time.deltaTime);
         move.z = Mathf.MoveTowards(move.z, vec.z, curAccel * Time.deltaTime);
 
@@ -50,7 +66,7 @@ public class PlayerMovement : MonoBehaviour
 
     }
 
-    public void Jump()
+    public void SetJump()
     {
         if (Input.GetKeyDown(KeyCode.Space) && !isJumped)
         {
@@ -70,6 +86,8 @@ public class PlayerMovement : MonoBehaviour
             }
 
         }
+
+
     }
 
 
@@ -84,8 +102,26 @@ public class PlayerMovement : MonoBehaviour
 
 
 
+    public void aimRotation() 
+    {
+        // 마우스 가로 세로 얼마나 움직이는지 반환된다.
+        // +위, -아레 움직임,  카메라 기준 마우스를 위로들면 
+        float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity;
+        float mouseY = -Input.GetAxis("Mouse Y")* mouseSensitivity;  
+        //Vector3 mouseDir = 
+    }
+
+
+
+    public void bodyRotation()
+    {
+
+    }
+
+
+
     // Start is called before the first frame update
-    void Start()
+    void Awake()
     {
         rigid = GetComponent<Rigidbody>();
     }
@@ -93,7 +129,7 @@ public class PlayerMovement : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        Move();
-        Jump();
+        SetMove();
+        SetJump();
     }
 }
