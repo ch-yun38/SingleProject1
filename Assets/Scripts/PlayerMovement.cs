@@ -9,14 +9,13 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private Transform aim;
 
     [Header("Mouse Config")]
-    [SerializeReference][Range(-90, 0)] private float minPitch;
+    [SerializeField][Range(-90, 0)] private float minPitch;
     [SerializeField][Range(0, 90)] private float maxPitch;
     [SerializeField][Range(0, 5)] private float mouseSensitivity;
 
 
-
-
     private Rigidbody rigid;
+    private PlayerStatus playerStatus;
     public float speed { get; private set; } = 10f;
     public float moveAccel { get; private set; } = 30f;
     public float jumpAccel { get; private set; } = 30f;
@@ -24,28 +23,15 @@ public class PlayerMovement : MonoBehaviour
     private float curAccel;
     private bool isJumped = false;
     private bool isAiming = false;
-
+    private float rotSpeed = 1f;
+    public Camera aimCamera;
+    public Camera idleCamera;
+    public Vector3 rotDir { get; private set; }
+    private Vector2 currentRotation;
     
-   
 
-    public void SetMove()
+    public void SetMove(Vector3 dir)
     {
-        // 입력 설정
-        float xInput = Input.GetAxisRaw("Horizontal");
-        float zInput = Input.GetAxisRaw("Vertical");
-
-        // 방향 설정
-        Vector3 dir = new Vector3(xInput, 0, zInput);
-
-
-        // 대각선 방향 속도 조절
-        if (dir.sqrMagnitude > 1)
-        {
-            // Vector3.sqrMagnitude : 읽기 전용, 벡터 길이의 제곱 값을 가져온다. (대각선 길이는 루트 있음)
-            // 방향 설정 (정규화), 방향이 대각선일 때 속도 과다 방지를 위함
-            dir = dir.normalized;
-        }
-
         // Rigidbody.velocity에는 Vector3 값만 입력 가능
         // MoveToward(현재속도, 목표속도(방향*최고속도), 한 프레임 동안 최대 가속거리)
         // x,z를 따로 두는 것은 y값 보존을 위함
@@ -55,6 +41,12 @@ public class PlayerMovement : MonoBehaviour
         Vector3 move = rigid.velocity;
         Vector3 vec = dir * speed;
 
+        if (isAiming)
+        {
+            vec *= 0.5f;
+        }
+
+
         // 점프 시와 이동 시의 이동속도를 다르게하여 점프 할때 이동속도가 빨라지는 것을 방지
         // curAccel은 점프가 활성화 되면 점프 가속도로, 점프가 비활성화 되면 이동 가속도로 이동하도록 삼항연산자 이용
         curAccel = isJumped ? jumpAccel : moveAccel;
@@ -63,33 +55,28 @@ public class PlayerMovement : MonoBehaviour
 
         //최종속도 반영       
         rigid.velocity = move;
-
     }
 
-    public void SetJump()
+
+    public void Jump()
     {
-        if (Input.GetKeyDown(KeyCode.Space) && !isJumped)
-        {
-            // 점프
-            rigid.AddForce(Vector3.up * jumpPower, ForceMode.Impulse);
-            isJumped = true;
-            if (isJumped == true)
-            {
-                // 점프하고 이동했을 때 빨라지는 것을 방지
-                jumpAccel = 0.1f * jumpAccel;
-
-                // 가속하면서 점프했을 때 이동속도가 빨라지는 것을 방지
-                Vector3 jumpVel = rigid.velocity;
-                jumpVel.x *= 0.65f;
-                jumpVel.z *= 0.65f;
-                rigid.velocity = jumpVel;
-            }
-
-        }
+        // 2단 점프 막기용으로 맨 위에 정의
+        if (isJumped == true) { return; }
 
 
+        // 점프
+        rigid.AddForce(Vector3.up * jumpPower, ForceMode.Impulse);
+        isJumped = true;
+        
+        // 점프하고 이동했을 때 빨라지는 것을 방지
+        jumpAccel = 0.1f * jumpAccel;
+
+        // 가속하면서 점프했을 때 이동속도가 빨라지는 것을 방지
+        Vector3 jumpVel = rigid.velocity;
+        jumpVel.x *= 0.65f;
+        jumpVel.z *= 0.65f;
+        rigid.velocity = jumpVel;
     }
-
 
     public void OnCollisionEnter(Collision collision)
     {
@@ -102,34 +89,76 @@ public class PlayerMovement : MonoBehaviour
 
 
 
-    public void aimRotation() 
+    public Vector3 AimRotation(Vector2 mousePose) 
     {
-        // 마우스 가로 세로 얼마나 움직이는지 반환된다.
-        // +위, -아레 움직임,  카메라 기준 마우스를 위로들면 
-        float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity;
-        float mouseY = -Input.GetAxis("Mouse Y")* mouseSensitivity;  
-        //Vector3 mouseDir = 
+        // 좌표*감도 = 마우스 회전 정도를 구함
+        Vector2 mouseDir = mousePose * mouseSensitivity;
+
+        // 현재 각도 확인
+        // 가로는 360회전 가능/ 세로축은 최대 최소의 고개 젖히기 제한이 있어야 함
+
+        currentRotation.x += mouseDir.x;
+        currentRotation.y = Mathf.Clamp(currentRotation.y + mouseDir.y, minPitch, maxPitch);
+
+        // 캐릭터 좌우만 움직이게 조절
+        transform.rotation = Quaternion.Euler(0, currentRotation.x, 0);
+      
+        // 에임 모드의 로컬 회전값을 저장
+        // 똑같이 마우스 y값이 3차 회전의 x값을 가리키므로 마우스 값을 받는 currentRotation.y는 x에,
+        // 그 다음 에임 카메라 자체의  좌표값을 넣고 aim좌표를 수정 x값은 회전에 따라 상하를 조절하고
+        // 나머지는 기존값 보존
+        Vector3 currentEuler = aim.localEulerAngles;
+        aim.localEulerAngles = new Vector3(currentRotation.y, currentEuler.y, currentEuler.z);
+
+        //rotDir은 회전시 플레이어의 진행 방향을 나타내는 벡터, 징행 방향 필요할때 쓰기
+        Vector3 rotateDirVector = transform.forward;
+        rotateDirVector.y = 0;
+        return rotateDirVector.normalized;
+
     }
 
 
-
-    public void bodyRotation()
+    // 에임상태가 아닌 경우 캐릭터만 회전하게
+    public void AvatarRotation(Vector3 direction)
     {
+        
+        // 방향값 0이면 가만히
+        if (direction == Vector3.zero) return;
+
+        // direction 방형으로 회전시기 dk바타의 회전방향을
+        Quaternion targetRotation = Quaternion.LookRotation(direction);
+
+        // 부드러운 움직임을 위한 보간(현재, 목표, 속도)
+        avatar.rotation = Quaternion.Lerp(avatar.rotation, targetRotation, rotSpeed*Time.deltaTime);
 
     }
 
+    // 에임모드
+    public void OnAimMode(bool aiming)
+    {
+        isAiming = aiming;
+        aimCamera.gameObject.SetActive(aiming);
+        idleCamera.gameObject.SetActive(!aiming);
+    }
 
-
-    // Start is called before the first frame update
     void Awake()
     {
         rigid = GetComponent<Rigidbody>();
+        playerStatus = GetComponent<PlayerStatus>();
+
     }
 
-    // Update is called once per frame
-    void Update()
+    void Start()
     {
-        SetMove();
-        SetJump();
+        Vector2 currentRotation = new Vector2()
+        {
+            x = transform.rotation.eulerAngles.x,
+            y = transform.rotation.eulerAngles.y
+        };
+    }
+
+    void LateUpdate()
+    {
+
     }
 }
