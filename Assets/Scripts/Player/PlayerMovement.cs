@@ -28,7 +28,7 @@ public class PlayerMovement : MonoBehaviour
     public Camera idleCamera;
     public Vector3 rotDir { get; private set; }
     private Vector2 currentRotation;
-    
+    private Animator animator;
 
     public void SetMove(Vector3 dir)
     {
@@ -139,6 +139,8 @@ public class PlayerMovement : MonoBehaviour
         isAiming = aiming;
         aimCamera.gameObject.SetActive(aiming);
         idleCamera.gameObject.SetActive(!aiming);
+
+        animator.SetBool("isAiming", aiming);
     }
 
     void Awake()
@@ -155,10 +157,20 @@ public class PlayerMovement : MonoBehaviour
             x = transform.rotation.eulerAngles.x,
             y = transform.rotation.eulerAngles.y
         };
+
+        animator = GetComponentInChildren<Animator>();
     }
 
-    void LateUpdate()
+    void Update()
     {
+        if (!isAiming)
+        {
+          
+            Vector3 aniVel = new Vector3(rigid.velocity.x, 0f, rigid.velocity.z);
+            float aniSpeed = aniVel.magnitude;
 
+            animator.SetFloat("speed", aniSpeed);
+            animator.SetBool("isAiming", isAiming);
+        }
     }
 }

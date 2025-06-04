@@ -7,7 +7,7 @@ using static UnityEditor.Progress;
 public class Rifle : Item
 {
 
-    public string weaponName = "rifle";
+    /*public string weaponName = "rifle";
     public Sprite weaponIcon;
     public float weaponCoolTime;
     public float reLoading;

@@ -5,10 +5,11 @@ public class PlayerStatus : MonoBehaviour
 {
     // 체력 관련 필드
     [Header("Health")]
-    public int CurrentHealth = 100;
-    public int MaxHealth = 100;
+    public int CurrentHealth = 10;
+    public int MaxHealth = 10;
     public bool IsDead { get; private set; } = false;
     public bool IsHit { get; private set; } = false;
+   
 
     //무적 상태 관련
     [Header("Invincibility")]
@@ -17,7 +18,7 @@ public class PlayerStatus : MonoBehaviour
     private float timeSinceLastHit = 0f;
 
     private Animator animator;
-
+    private GameManagerProj gameManager;
     void Awake()
     {
         animator = GetComponentInChildren<Animator>();
@@ -32,6 +33,10 @@ public class PlayerStatus : MonoBehaviour
     void Update()
     {
         timeSinceLastHit += Time.deltaTime;
+        if (CurrentHealth <= 0 && !IsDead)
+        {
+            PlayerDeath();
+        }
     }
 
     public void TakeDamage(int damage)
@@ -60,6 +65,7 @@ public class PlayerStatus : MonoBehaviour
         if (moveScript != null) moveScript.enabled = false;
 
         GetComponent<Rigidbody>().velocity = Vector3.zero;
+        gameManager.GameOver();
     }
 
     public void Heal(int amount)

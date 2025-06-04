@@ -6,7 +6,7 @@ public class PlayerController : MonoBehaviour
 {
     private PlayerMovement movement;
     private PlayerStatus status;
-
+    public AudioSource gunShotSource;
 
 
     public Vector3 GetInputDirection()
@@ -68,8 +68,11 @@ public class PlayerController : MonoBehaviour
 
     private void Update()
     {
+        if (Time.timeScale == 0f) return;
         Vector3 inputDir = GetMoveDirection(); // 카메라 기준 방향 포함
         movement.SetMove(inputDir);
+        if (gunShotSource != null)
+            gunShotSource.Play();
 
 
         if (Input.GetKeyDown(KeyCode.Space))
