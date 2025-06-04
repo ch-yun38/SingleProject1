@@ -16,9 +16,9 @@ public class PlayerMovement : MonoBehaviour
 
     private Rigidbody rigid;
     private PlayerStatus playerStatus;
-    public float speed { get; private set; } = 10f;
-    public float moveAccel { get; private set; } = 30f;
-    public float jumpAccel { get; private set; } = 30f;
+    public float speed { get; private set; } = 5f;
+    public float moveAccel { get; private set; } = 15f;
+    public float jumpAccel { get; private set; } = 15f;
     private float jumpPower = 5;
     private float curAccel;
     private bool isJumped = false;
